@@ -1,0 +1,33 @@
+[package]
+name = "mac-sysmon"
+version = "0.1.0"
+edition = "2021"
+description = "macOS System Resource & Process Monitor with Live Streaming and Vanilla TS UI"
+license = "Apache-2.0"
+readme = "README.md"
+authors = ["Ashton Mozano"]
+repository = "https://github.com/mozano/mac-sysmon-rs"
+
+[lib]
+name = "mac_sysmon"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mac-sysmon"
+path = "src/main.rs"
+
+[dependencies]
+sysinfo = "0.33"
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.7", features = ["ws"] }
+tower-http = { version = "0.5", features = ["fs", "cors", "trace"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rust-embed = { version = "8", features = ["mime-guess"] }
+mime_guess = "2.0"
+clap = { version = "4.5", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+open = "5.3"
+futures-util = "0.3"
+libc = "0.2"
