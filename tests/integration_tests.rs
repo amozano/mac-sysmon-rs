@@ -164,4 +164,24 @@ mod tests {
         assert_eq!(roundtrip.processes.len(), 1);
         assert_eq!(roundtrip.processes[0].pid, 12345);
     }
+
+    #[test]
+    fn test_detect_macos_app() {
+        use mac_sysmon::collector::detect_macos_app;
+
+        let exe_bundle = Some("/Applications/Safari.app/Contents/MacOS/Safari".to_string());
+        let (app_name, is_app) = detect_macos_app(&exe_bundle, "Safari");
+        assert!(is_app);
+        assert_eq!(app_name, Some("Safari".to_string()));
+
+        let helper = Some("/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Helpers/Google Chrome Helper.app/Contents/MacOS/Google Chrome Helper".to_string());
+        let (helper_name, helper_is_app) = detect_macos_app(&helper, "Google Chrome Helper");
+        assert!(!helper_is_app);
+        assert_eq!(helper_name, None);
+
+        let non_app = Some("/usr/bin/grep".to_string());
+        let (non_app_name, non_app_is_app) = detect_macos_app(&non_app, "grep");
+        assert!(!non_app_is_app);
+        assert_eq!(non_app_name, None);
+    }
 }

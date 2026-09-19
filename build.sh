@@ -14,13 +14,22 @@ echo "========================================================"
 echo ""
 echo "▶ Phase 1: Compiling Vanilla TypeScript Frontend..."
 if [ -d "frontend" ]; then
-  cd frontend
-  if [ ! -d "node_modules" ]; then
-    echo "  Installing frontend devDependencies..."
-    npm install --silent
+  if [ ! -f "dist/index.html" ] || [ ! -f "dist/bundle.js" ]; then
+    echo "  Frontend assets missing from dist/, building from source..."
+    cd frontend
+    if [ ! -d "node_modules" ]; then
+      echo "  Installing frontend devDependencies..."
+      npm install --silent
+    fi
+    node build.js
+    cd "$SCRIPT_DIR"
+  elif [ -d "frontend/node_modules" ]; then
+    cd frontend
+    node build.js
+    cd "$SCRIPT_DIR"
+  else
+    echo "  Pre-built frontend assets present in dist/ (skipping npm install)"
   fi
-  node build.js
-  cd "$SCRIPT_DIR"
 fi
 
 # Verify dist directory

@@ -12,14 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod collector;
-mod models;
-mod process_ops;
-mod server;
-
 use clap::Parser;
-use collector::MetricsCollector;
-use server::AppState;
+use mac_sysmon::collector::MetricsCollector;
+use mac_sysmon::server::{self, AppState};
 use std::net::SocketAddr;
 use std::time::Duration;
 use tracing::{error, info, Level};

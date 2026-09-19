@@ -114,8 +114,6 @@ impl MetricsCollector {
 
             // Calculate network rates
             let mut net_rates = HashMap::new();
-            let mut total_rx_rate = 0u64;
-            let mut total_tx_rate = 0u64;
 
             for (name, net) in self.networks.iter() {
                 // Filter out non-physical or inactive interfaces
@@ -133,9 +131,6 @@ impl MetricsCollector {
                 let rx_per_sec = (rx_delta as f64 / elapsed_secs) as u64;
                 let tx_per_sec = (tx_delta as f64 / elapsed_secs) as u64;
 
-                total_rx_rate += rx_per_sec;
-                total_tx_rate += tx_per_sec;
-
                 net_rates.insert(name.clone(), (rx_per_sec, tx_per_sec));
                 self.last_net_totals.insert(name.clone(), (rx, tx));
             }
@@ -143,7 +138,7 @@ impl MetricsCollector {
             // Calculate aggregate process disk I/O rates
             let mut total_disk_read_delta = 0u64;
             let mut total_disk_written_delta = 0u64;
-            for (_pid, process) in self.system.processes() {
+            for process in self.system.processes().values() {
                 let du = process.disk_usage();
                 total_disk_read_delta += du.read_bytes;
                 total_disk_written_delta += du.written_bytes;
@@ -228,7 +223,7 @@ impl MetricsCollector {
             hostname: System::host_name().unwrap_or_else(|| "macbook".to_string()),
             os_name: System::name().unwrap_or_else(|| "macOS".to_string()),
             os_version: System::os_version().unwrap_or_else(|| "Unknown".to_string()),
-            kernel_version: System::kernel_version().unwrap_or_else(|| "".to_string()),
+            kernel_version: System::kernel_version().unwrap_or_default(),
             uptime_secs: System::uptime(),
             cpu_arch: std::env::consts::ARCH.to_string(),
             cpu_brand: system
@@ -456,35 +451,7 @@ impl MetricsCollector {
     }
 
     pub fn detect_macos_app(exe_path: &Option<String>, proc_name: &str) -> (Option<String>, bool) {
-        if let Some(ref path_str) = exe_path {
-            let path = Path::new(path_str);
-            let mut current = path.parent();
-            while let Some(dir) = current {
-                if let Some(file_name) = dir.file_name().and_then(|s| s.to_str()) {
-                    if file_name.ends_with(".app") {
-                        let clean_name = file_name.trim_end_matches(".app").to_string();
-                        return (Some(clean_name), true);
-                    }
-                }
-                current = dir.parent();
-            }
-
-            if path_str.starts_with("/Applications/") || path_str.starts_with("/System/Applications/") {
-                let clean = Path::new(path_str)
-                    .file_name()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or(proc_name)
-                    .trim_end_matches(".app")
-                    .to_string();
-                return (Some(clean), true);
-            }
-        }
-
-        if proc_name.ends_with(" Helper") || proc_name.ends_with(" Service") {
-            return (None, false);
-        }
-
-        (None, false)
+        detect_macos_app(exe_path, proc_name)
     }
 
     fn format_status(raw: String) -> String {
@@ -501,4 +468,43 @@ impl MetricsCollector {
             "Run".to_string()
         }
     }
+}
+
+/// Detects macOS .app bundle name and flag from executable path and process name.
+pub fn detect_macos_app(exe_path: &Option<String>, proc_name: &str) -> (Option<String>, bool) {
+    if proc_name.ends_with(" Helper") || proc_name.ends_with(" Service") {
+        return (None, false);
+    }
+
+    if let Some(ref path_str) = exe_path {
+        let path = Path::new(path_str);
+        let mut current = path.parent();
+        while let Some(dir) = current {
+            if let Some(file_name) = dir.file_name().and_then(|s| s.to_str()) {
+                if file_name.ends_with(".app") {
+                    let clean_name = file_name.trim_end_matches(".app").to_string();
+                    if clean_name.ends_with(" Helper") || clean_name.ends_with(" Service") {
+                        return (None, false);
+                    }
+                    return (Some(clean_name), true);
+                }
+            }
+            current = dir.parent();
+        }
+
+        if path_str.starts_with("/Applications/") || path_str.starts_with("/System/Applications/") {
+            let clean = Path::new(path_str)
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or(proc_name)
+                .trim_end_matches(".app")
+                .to_string();
+            if clean.ends_with(" Helper") || clean.ends_with(" Service") {
+                return (None, false);
+            }
+            return (Some(clean), true);
+        }
+    }
+
+    (None, false)
 }

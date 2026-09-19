@@ -144,7 +144,7 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
         while let Ok(metrics) = rx.recv().await {
             match serde_json::to_string(&metrics) {
                 Ok(json) => {
-                    if let Err(_) = sender.send(Message::Text(json)).await {
+                    if sender.send(Message::Text(json)).await.is_err() {
                         // Client disconnected
                         break;
                     }
